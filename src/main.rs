@@ -42,10 +42,12 @@ fn main() {
             .unwrap_or_else(|e| panic!(e));
     }
     let (fundecs, ast) = parse::parse(&s);
-    println!("fundecs: {:?}", fundecs);
-    println!("{:?}", ast);
-    if args.flag_typing {
-        println!("typing: {:?}", typing::f(&fundecs, &ast));
+    if args.flag_verbose {
+        println!("fundecs: {:?}", fundecs);
+        println!("{:?}", ast);
+        if args.flag_typing {
+            println!("typing: {:?}", typing::f(&fundecs, &ast));
+        }
     }
     println!("result = {:?}", interpret::f(&fundecs, &ast));
 }
