@@ -9,8 +9,8 @@ use std::io;
 use std::io::{Read,Write};
 use std::fs::File;
 use calc::parse;
-use calc::interpret;
-use calc::typing;
+// use calc::interpret;
+// use calc::typing;
 
 docopt!(Args, "
 Usage: calc-rust [options] [INPUT]
@@ -41,7 +41,9 @@ fn main() {
         fp.read_to_string(&mut s)
             .unwrap_or_else(|e| panic!(e));
     }
-    let (fundecs, ast) = parse::parse(&s);
+    let ast = parse::parse(&s);
+    println!("{:?}", ast);
+    /*
     if args.flag_verbose {
         println!("fundecs: {:?}", fundecs);
         println!("{:?}", ast);
@@ -50,4 +52,5 @@ fn main() {
         }
     }
     println!("result = {:?}", interpret::f(&fundecs, &ast));
+     */
 }

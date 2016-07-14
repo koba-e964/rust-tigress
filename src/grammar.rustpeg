@@ -1,63 +1,118 @@
 use ast::*;
 use parse::*;
-
+/*
+%nonassoc prec_ifdangling_noelse
+%nonassoc ELSE
+%nonassoc prec_single_if
+%nonassoc ":="
+%left "|"
+%left "&"
+%nonassoc "=" "<>" "<" ">" "<=" ">="
+%left "+" "-"
+%left "*" "/"
+%right UNARY_MINUS
+*/
 #[pub]
-top_exp -> (Vec<FunDec>, AST)
-        = space* f:fundec_space* e:exp space* { (f, e) }
+top_expr -> Expr
+     = space* e:expr space* { e }
+
+expr -> Expr
+     = "-" space* e:expr { Expr::Neg(Box::new(e)) }
+     / expr0
+     // / bin_expr
+
+expr0 -> Expr // ifelse
+      = expr1
+expr1 -> Expr // if
+      = expr2
+expr2 -> Expr // :=
+      = l:lvalue space* ":=" space* e:expr3 { Expr::LAsgn(l, Box::new(e)) }
+      / expr3
+expr3 -> Expr // "|"
+      = e:expr4 (space* "|" space* expr4)* { e }
+expr4 -> Expr // "&"
+      = e:expr5 (space* "&" space* expr5)* { e }
+expr5 -> Expr // %nonassoc "=" "<>" "<" ">" "<=" ">="
+      = e1:expr6 space* op:op5 space* e2:expr6 { Expr::OpNode(op, Box::new(e1), Box::new(e2)) }
+      / expr6
+op5 -> Op // %nonassoc "=" "<>" "<" ">" "<=" ">="
+    = "=" { Op::Eq }
+    / "<>" { Op::Ne }
+    / "<=" { Op::Le }
+    / ">=" { Op::Ge }
+    / "<" { Op::Lt }
+    / ">" { Op::Gt }
+expr6 -> Expr // %left "+" "-"
+      = e:expr7 (space* ("+" / "-") space* expr7)* { e }
+      / expr7
+expr7 -> Expr // %left "*" "/"
+      = e:expr8 (space* ("*" / "/") space* expr8)* { e }
+      / expr8
+expr8 -> Expr // %right unary_minus
+      = "-" space* e:expr8 { Expr::Neg(Box::new(e)) }
+      / primary
+primary -> Expr
+     = string_constant
+     / integer_constant
+     / nil
+     / l:lvalue { Expr::LVal(l) }
+lvalue -> LValue
+     = i:id { LValue::Id(i) } // not complete
+/*
 fundec_space -> FunDec
         = f:fundec space* { f }
 fundec -> FunDec
-        = "def" space+ f:ident space*
+        = "def" space+ f:id space*
           "(" space* params:params space* ")" space* ":" space* ret_ty:type space*
           "{" space* e:exp space* "}" { {let mut t = params; t.reverse(); (f, t, ret_ty, e)} }
 params -> Vec<(String, Type)>
-        = x:ident space* ":" space* ty:type space* "," space* params:params
+        = x:id space* ":" space* ty:type space* "," space* params:params
           { {let mut t = params; t.push((x, ty)); t} }
-        / x:ident space* ":" space* ty:type { vec![(x, ty)] }
-exp -> AST
-	= letex
-        / add_ast
-letex -> AST
-        = "let" space+ x:ident space* "=" space* e1:exp space+ "in" space+ e2:exp
-           { AST::LetEx(x, Box::new(e1), Box::new(e2)) }
-add_ast -> AST
-        = e:sum { super::vecast_to_ast(e, |op, l, r| AST::OpNode(op, Box::new(l), Box::new(r))) }
-sum -> (Vec<(AST, Op)>, AST)
+        / x:id space* ":" space* ty:type { vec![(x, ty)] }
+letex -> Expr
+        = "let" space+ x:id space* "=" space* e1:exp space+ "in" space+ e2:exp
+           { Expr::LetEx(x, Box::new(e1), Box::new(e2)) }
+add_ast -> Expr
+        = e:sum { super::vecast_to_ast(e, |op, l, r| Expr::OpNode(op, Box::new(l), Box::new(r))) }
+sum -> (Vec<(Expr, Op)>, Expr)
 	= l:mul_ast space* op:addop space* r:sum { {let (mut x, y) = r; x.push((l, op)); (x, y)} }
 	/ e:mul_ast { (Vec::new(), e) }
 addop -> Op
         = "+" { Op::Add }
         / "-" { Op::Sub }
-mul_ast -> AST
-        = e:product { super::vecast_to_ast(e, |op, l, r| AST::OpNode(op, Box::new(l), Box::new(r))) }
-product -> (Vec<(AST, Op)>, AST)
+mul_ast -> Expr
+        = e:product { super::vecast_to_ast(e, |op, l, r| Expr::OpNode(op, Box::new(l), Box::new(r))) }
+product -> (Vec<(Expr, Op)>, Expr)
 	= l:atom space* op:mulop space* r:product { {let (mut x, y) = r; x.push((l, op)); (x, y)} }
 	/ e:atom { (Vec::new(), e) }
 mulop -> Op
         = "*" { Op::Mul }
         / "/" { Op::Div }
-atom -> AST
+atom -> Expr
 	= number
         / str
 	/ "if" space* cond:exp space* "then" space* e1:exp space*
 	"else" space* e2:exp space* "end"
-	{ AST::IfNode(Box::new(cond), Box::new(e1), Box::new(e2)) }
-	/ v:ident space* "(" space* e:args space* ")"
-           { {let mut t = e; t.reverse(); AST::FunApp(v, t)} }
-        / v:ident { AST::Var(v) }
+	{ Expr::IfNode(Box::new(cond), Box::new(e1), Box::new(e2)) }
+	/ v:id space* "(" space* e:args space* ")"
+           { {let mut t = e; t.reverse(); Expr::FunApp(v, t)} }
+        / v:id { Expr::Var(v) }
 	/ "(" space* v:exp space* ")" { v }
-number -> AST
-	= [0-9]+ { AST::Num(match_str.parse().unwrap()) }
-args -> Vec<AST>
+args -> Vec<Expr>
         = e:exp space* "," space* a:args { {let mut t = a; t.push(e); t} }
         / e:exp { vec![e] }
-str -> AST
-        = "\"" s:str_internal "\"" { AST::Str(s) }
+*/
+nil -> Expr
+        = "nil" { Expr::Nil }
+integer_constant -> Expr
+	= [0-9]+ { Expr::Num(match_str.parse().unwrap()) }
+string_constant -> Expr
+        = "\"" s:str_internal "\"" { Expr::Str(s) }
 str_internal -> String
         = [^\"]* { match_str.to_string() }
 space -> ()
         = " " / "\n" / "\r"
-ident -> String
+id -> String
         = !keyword [a-zA-Z]+ { match_str.to_string() }
 type -> Type
         = "int" { Type::Int }
