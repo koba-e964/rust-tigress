@@ -12,6 +12,8 @@ pub enum Expr {
     LAsgn(LValue, Box<Expr>),
     Seq(Vec<Expr>),
     LetEx(String, Box<Expr>, Box<Expr>),
+    For(String, Box<Expr>, Box<Expr>, Box<Expr>),
+    Do(Box<Expr>, Box<Expr>),
     FunApp(String, Vec<Expr>),
     Break,
 }

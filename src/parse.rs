@@ -39,8 +39,14 @@ mod tests {
     #[test]
     fn dangling_if_test() {
         assert_eq!(parse("if 4 then if 5 then 3 else 2"),
-                         Expr::IfNode(Box::new(Expr::Num(4)),
-                                      Box::new(Expr::IfNode(Box::new(Expr::Num(5)), Box::new(Expr::Num(3)), Box::new(Expr::Num(2)))),
-                                      Box::new(Expr::Nil)));
+                   Expr::IfNode(Box::new(Expr::Num(4)),
+                                Box::new(Expr::IfNode(Box::new(Expr::Num(5)), Box::new(Expr::Num(3)), Box::new(Expr::Num(2)))),
+                                Box::new(Expr::Nil)));
+    }
+    #[test]
+    fn dangling_do_test() {
+        assert_eq!(parse("while 1 do 2 + 3"),
+                   Expr::Do(Box::new(Expr::Num(1)),
+                            Box::new(Expr::OpNode(Op::Add, Box::new(Expr::Num(2)), Box::new(Expr::Num(3))))));
     }
 }

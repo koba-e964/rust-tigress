@@ -17,7 +17,9 @@ top_expr -> Expr
      = space* e:expr space* { e }
 
 expr -> Expr
-     = expr0
+     = "for" space+ i:id space* ":=" space* s:expr space+ "to" space+ u:expr space+ "do" space+ e:expr { Expr::For(i, Box::new(s), Box::new(u), Box::new(e)) }
+     / "while" space+ c:expr space+ "do" space+ e:expr { Expr::Do(Box::new(c), Box::new(e)) }
+     / expr0
 
 expr0 -> Expr // if
       = "if" space* c:expr space* "then" space* e1:expr1 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(Expr::Nil)) }
