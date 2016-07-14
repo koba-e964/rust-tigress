@@ -60,7 +60,8 @@ expr8 -> Expr // %right unary_minus
       = "-" space* e:expr8 { Expr::Neg(Box::new(e)) }
       / primary
 primary -> Expr
-     = string_constant
+     = "let" space+ decs:declaration_list space+ "in" space+ es:expr_seq_opt space+ "end" { Expr::Let(decs, Box::new(Expr::Seq(es))) }
+     / string_constant
      / integer_constant
      / "nil" { Expr::Nil }
      / i:id "(" space* args:expr_list_opt space* ")" { Expr::FunApp(i, args) }
@@ -78,6 +79,12 @@ expr_list_opt -> Vec<Expr>
 
 lvalue -> LValue
      = i:id { LValue::Id(i) } // not complete
+
+declaration_list -> Vec<Dec>
+     = declaration+
+declaration -> Dec
+     = "type" space+ id space* "=" space* type { panic!() }
+     / "var" space+ i:id space* ty:(":" space* ty:id space* { ty })? ":=" space* e:expr { Dec::Var(i, ty, e) }
 /*
 fundec_space -> FunDec
         = f:fundec space* { f }

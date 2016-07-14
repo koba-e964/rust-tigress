@@ -11,7 +11,7 @@ pub enum Expr {
     Nil,
     LAsgn(LValue, Box<Expr>),
     Seq(Vec<Expr>),
-    LetEx(String, Box<Expr>, Box<Expr>),
+    Let(Vec<Dec>, Box<Expr>),
     For(String, Box<Expr>, Box<Expr>, Box<Expr>),
     Do(Box<Expr>, Box<Expr>),
     FunApp(String, Vec<Expr>),
@@ -33,6 +33,11 @@ pub enum Op {
     Mul, Div,
     Eq, Ne, Lt, Gt, Le, Ge,
     Or, And,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Dec {
+    Var(String, Option<String>, Expr), // second is type-id
 }
 
 #[derive(PartialEq, Clone, Debug)]
