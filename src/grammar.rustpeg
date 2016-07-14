@@ -59,20 +59,13 @@ primary -> Expr
      / l:lvalue { Expr::LVal(l) }
 
 expr_seq_opt -> Vec<Expr>
-     = expr_seq
+     = expr ++ (space* ";" space*)
      / { Vec::new() }
-expr_seq -> Vec<Expr>
-     = e:expr ls:expr_seq_sub* { { let mut p = ls; p.reverse(); p.push(e); p.reverse(); p} }
-expr_seq_sub -> Expr
-     = space* ";" space* e:expr { e }
 
 expr_list_opt -> Vec<Expr>
-     = expr_list
+     = expr ++ (space* "," space*)
      / { Vec::new() }
-expr_list -> Vec<Expr>
-     = e:expr ls:expr_list_sub* { { let mut p = ls; p.reverse(); p.push(e); p.reverse(); p} }
-expr_list_sub -> Expr
-     = space* "," space* e:expr { e }
+
 lvalue -> LValue
      = i:id { LValue::Id(i) } // not complete
 /*
