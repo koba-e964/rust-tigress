@@ -17,9 +17,7 @@ top_expr -> Expr
      = space* e:expr space* { e }
 
 expr -> Expr
-     = "-" space* e:expr { Expr::Neg(Box::new(e)) }
-     / expr0
-     // / bin_expr
+     = expr0
 
 expr0 -> Expr // ifelse
       = expr1
@@ -54,8 +52,27 @@ expr8 -> Expr // %right unary_minus
 primary -> Expr
      = string_constant
      / integer_constant
-     / nil
+     / "nil" { Expr::Nil }
+     / i:id "(" space* args:expr_list_opt space* ")" { Expr::FunApp(i, args) }
+     / "(" e:expr_seq_opt ")" { Expr::Seq(e) }
+     / "break" { Expr::Break }
      / l:lvalue { Expr::LVal(l) }
+
+expr_seq_opt -> Vec<Expr>
+     = expr_seq
+     / { Vec::new() }
+expr_seq -> Vec<Expr>
+     = e:expr ls:expr_seq_sub* { { let mut p = ls; p.reverse(); p.push(e); p.reverse(); p} }
+expr_seq_sub -> Expr
+     = space* ";" space* e:expr { e }
+
+expr_list_opt -> Vec<Expr>
+     = expr_list
+     / { Vec::new() }
+expr_list -> Vec<Expr>
+     = e:expr ls:expr_list_sub* { { let mut p = ls; p.reverse(); p.push(e); p.reverse(); p} }
+expr_list_sub -> Expr
+     = space* "," space* e:expr { e }
 lvalue -> LValue
      = i:id { LValue::Id(i) } // not complete
 /*
@@ -102,8 +119,6 @@ args -> Vec<Expr>
         = e:exp space* "," space* a:args { {let mut t = a; t.push(e); t} }
         / e:exp { vec![e] }
 */
-nil -> Expr
-        = "nil" { Expr::Nil }
 integer_constant -> Expr
 	= [0-9]+ { Expr::Num(match_str.parse().unwrap()) }
 string_constant -> Expr
@@ -113,8 +128,7 @@ str_internal -> String
 space -> ()
         = " " / "\n" / "\r"
 id -> String
-        = !keyword [a-zA-Z]+ { match_str.to_string() }
+        = [a-zA-Z] [a-zA-Z0-9]* { match_str.to_string() }
 type -> Type
         = "int" { Type::Int }
 	/ "str" { Type::Str }
-keyword -> () = "def" / "let" / "in" / "if" / "then" / "else"

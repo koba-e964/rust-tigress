@@ -12,7 +12,7 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 ## functionality
 |item|status (interpreter) |
 |---|---|
-| 1 Lexical Aspects | not supported |
+| 1 Lexical Aspects | `if`, `while`, `let`, `struct` are not supported |
 | 2.1 Lvalues | not supported |
 | 2.2 Return values | not supported |
 | 2.3 Record and Array Literals | not supported |

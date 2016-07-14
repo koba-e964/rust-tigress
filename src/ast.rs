@@ -10,8 +10,10 @@ pub enum Expr {
     IfNode(Box<Expr>, Box<Expr>, Box<Expr>), // If the first evaluates to non-zero, return the second. Otherwise, return the third.
     Nil,
     LAsgn(LValue, Box<Expr>),
+    Seq(Vec<Expr>),
     LetEx(String, Box<Expr>, Box<Expr>),
     FunApp(String, Vec<Expr>),
+    Break,
 }
 
 #[derive(PartialEq, Clone, Debug)]
