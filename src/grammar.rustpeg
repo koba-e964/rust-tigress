@@ -88,7 +88,7 @@ lvalue -> LValue
      = i:id { LValue::Id(i) } // not complete
 
 declaration_list -> Vec<Dec>
-     = declaration+
+     = declaration ++ (space*)
 declaration -> Dec
      = "type" space+ id space* "=" space* type { panic!() }
      / "var" space+ i:id space* ty:(":" space* ty:id space* { ty })? ":=" space* e:expr { Dec::Var(i, ty, e) }

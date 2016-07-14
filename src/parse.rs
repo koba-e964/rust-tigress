@@ -32,6 +32,7 @@ pub fn parse(s: &str) -> Expr {
 mod tests {
     use parse::*;
     use ast::*;
+    use ast::Expr::*;
     #[test]
     fn parse_test() {
         assert_eq!(parse("4 -2"), Expr::OpNode(Op::Sub, Box::new(Expr::Num(4)), Box::new(Expr::Num(2))));
@@ -48,5 +49,20 @@ mod tests {
         assert_eq!(parse("while 1 do 2 + 3"),
                    Expr::Do(Box::new(Expr::Num(1)),
                             Box::new(Expr::OpNode(Op::Add, Box::new(Expr::Num(2)), Box::new(Expr::Num(3))))));
+    }
+    #[test]
+    fn let_test() {
+        assert_eq!(parse("let var x:= 4 var y:=3 in x + y end"),
+                   Let(vec![Dec::Var("x".to_string(), None, Num(4)), Dec::Var("y".to_string(), None, Num(3))],
+                       Box::new(Seq(vec![OpNode(Op::Add,
+                                                Box::new(LVal(LValue::Id("x".to_string()))),
+                                                Box::new(LVal(LValue::Id("y".to_string()))))]))));
+    }
+    #[test]
+    fn new_struct_test() {
+        assert_eq!(parse("web {dat = 3 }"),
+                   Expr::NewStruct("web".to_string(),
+                                   vec![Field::Field("dat".to_string(), Box::new(Expr::Num(3)))]));
+        assert_eq!(parse("dummy {}"), Expr::NewStruct("dummy".to_string(), Vec::new()));
     }
 }
