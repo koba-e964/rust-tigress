@@ -65,6 +65,13 @@ mod tests {
                        Box::new(Seq(vec![LVal(LValue::Id("x".to_string()))]))));
         assert_eq!(parse("let type web = {dat: int} in web {dat = 3} end"),
                    Let(vec![Dec::Type("web".to_string(), Type::Field(vec![("dat".to_string(), "int".to_string())]))], Box::new(Seq(vec![NewStruct("web".to_string(), vec![("dat".to_string(), Num(3))])]))));
+        assert_eq!(parse("let function f(x: int): int = x in x end"),
+                   Let(vec![
+                       Dec::Fun("f".to_string(),
+                           vec![("x".to_string(), "int".to_string())],
+                           Some("int".to_string()),
+                           LVal(LValue::Id("x".to_string())))],
+                       Box::new(Seq(vec![LVal(LValue::Id("x".to_string()))]))));
     }
     #[test]
     fn new_struct_test() {
@@ -73,4 +80,5 @@ mod tests {
                                    vec![("dat".to_string(), Expr::Num(3))]));
         assert_eq!(parse("dummy {}"), Expr::NewStruct("dummy".to_string(), Vec::new()));
     }
+    
 }

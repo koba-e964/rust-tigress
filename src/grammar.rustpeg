@@ -92,6 +92,7 @@ declaration_list -> Vec<Dec>
 declaration -> Dec
      = "type" space+ tyid:id space* "=" space* ty:type { Dec::Type(tyid, ty) }
      / "var" space+ i:id space* ty:(":" space* ty:id space* { ty })? ":=" space* e:expr { Dec::Var(i, ty, e) }
+     / "function" space+ fname:id space* "(" space* fields:type_fields_opt space* ")" space* retty:(":" space* t:id space* { t })? "=" space* e:expr { Dec::Fun(fname, fields, retty, e) }
 /*
 fundec_space -> FunDec
         = f:fundec space* { f }

@@ -12,7 +12,7 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 ## functionality
 |item|status (interpreter) |
 |---|---|
-| 1 Lexical Aspects | function declaration, lvalue member reference are not supported |
+| 1 Lexical Aspects | lvalue member reference is not supported |
 | 2.1 Lvalues | not supported |
 | 2.2 Return values | not supported |
 | 2.3 Record and Array Literals | not supported |

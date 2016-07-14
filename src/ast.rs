@@ -41,6 +41,7 @@ pub enum Op {
 pub enum Dec {
     Type(String, Type),
     Var(String, Option<String>, Expr), // second is type-id
+    Fun(String, Vec<TypeField>, Option<String>, Expr), // third is type-id
 }
 
 pub type Field = (String, Expr);
