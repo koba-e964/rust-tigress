@@ -19,10 +19,12 @@ top_expr -> Expr
 expr -> Expr
      = expr0
 
-expr0 -> Expr // ifelse
-      = expr1
-expr1 -> Expr // if
-      = expr2
+expr0 -> Expr // if
+      = "if" space* c:expr space* "then" space* e1:expr1 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(Expr::Nil)) }
+      / expr1
+expr1 -> Expr // ifelse
+      = "if" space* c:expr space* "then" space* e1:expr2 space* "else" space* e2:expr2 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(e2)) }
+      / expr2
 expr2 -> Expr // :=
       = l:lvalue space* ":=" space* e:expr3 { Expr::LAsgn(l, Box::new(e)) }
       / expr3

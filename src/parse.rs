@@ -34,11 +34,13 @@ mod tests {
     use ast::*;
     #[test]
     fn parse_test() {
-        assert_eq!(parse("4 -2").1, Expr::OpNode(Op::Sub, Box::new(Expr::Num(4)), Box::new(Expr::Num(2))));
-        assert_eq!(parse("let x = 4 in x + y * 2").1,
-            Expr::LetEx("x".to_string(), Box::new(Expr::Num(4)),
-                       Box::new(Expr::OpNode(Op::Add, Box::new(Expr::Var("x".to_string())),
-                                    Box::new(Expr::OpNode(Op::Mul, Box::new(Expr::Var("y".to_string())), Box::new(Expr::Num(2)))))))
-        );
+        assert_eq!(parse("4 -2"), Expr::OpNode(Op::Sub, Box::new(Expr::Num(4)), Box::new(Expr::Num(2))));
+    }
+    #[test]
+    fn dangling_if_test() {
+        assert_eq!(parse("if 4 then if 5 then 3 else 2"),
+                         Expr::IfNode(Box::new(Expr::Num(4)),
+                                      Box::new(Expr::IfNode(Box::new(Expr::Num(5)), Box::new(Expr::Num(3)), Box::new(Expr::Num(2)))),
+                                      Box::new(Expr::Nil)));
     }
 }
