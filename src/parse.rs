@@ -1,22 +1,21 @@
-use ast::{Expr, FunDec};
+use ast::{Expr, Op};
 
 
 /*
- * Example: ([(1, +), (2, -)], 4) ==> (1 + 2) - 4
- * Note that va.0 is in reverse order.
+ * Example: ([(1, +), (2, -)], 4) ==> (4 + 1) - 2
  */
-fn vecast_to_ast<T, F>(va: (Vec<(Expr, T)>, Expr), fold: F) -> Expr
+pub fn fold_to_ast<T, F>(va: (Vec<(Expr, T)>, Expr), fold: F) -> Expr
 where F: Fn(T, Expr, Expr) -> Expr, T: Copy {
-    let (mut x, y) = va;
-    if x.len() == 0 {
-        return y;
-    }
-    x.reverse();
-    let mut ast = x[0].0.clone();
-    for i in 0 .. x.len(){
-        ast = fold(x[i].1, ast, if i == x.len() - 1 { y.clone() } else { x[i + 1].0.clone() });
+    let (x, y) = va;
+    let mut ast = y;
+    for (e, t) in x {
+        ast = fold(t, ast, e);
     }
     ast
+}
+
+pub fn fold_op(first: Expr, ops: Vec<(Expr, Op)>) -> Expr {
+    fold_to_ast((ops, first), |t, e1, e2| Expr::OpNode(t, Box::new(e1), Box::new(e2)))
 }
 
 peg! tigress_grammar(include_str!("grammar.rustpeg"));
