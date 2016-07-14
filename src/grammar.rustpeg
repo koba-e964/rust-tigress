@@ -81,7 +81,7 @@ expr_list_opt -> Vec<Expr>
      / { Vec::new() }
 
 field_list_opt -> Vec<Field>
-     = (i:id space* "=" space* e:expr { Field::Field(i, Box::new(e)) }) ++ (space* "," space*)
+     = (i:id space* "=" space* e:expr { (i, e) }) ++ (space* "," space*)
      / { Vec::new() }
 
 lvalue -> LValue
@@ -90,7 +90,7 @@ lvalue -> LValue
 declaration_list -> Vec<Dec>
      = declaration ++ (space*)
 declaration -> Dec
-     = "type" space+ id space* "=" space* type { panic!() }
+     = "type" space+ tyid:id space* "=" space* ty:type { Dec::Type(tyid, ty) }
      / "var" space+ i:id space* ty:(":" space* ty:id space* { ty })? ":=" space* e:expr { Dec::Var(i, ty, e) }
 /*
 fundec_space -> FunDec
@@ -99,42 +99,6 @@ fundec -> FunDec
         = "def" space+ f:id space*
           "(" space* params:params space* ")" space* ":" space* ret_ty:type space*
           "{" space* e:exp space* "}" { {let mut t = params; t.reverse(); (f, t, ret_ty, e)} }
-params -> Vec<(String, Type)>
-        = x:id space* ":" space* ty:type space* "," space* params:params
-          { {let mut t = params; t.push((x, ty)); t} }
-        / x:id space* ":" space* ty:type { vec![(x, ty)] }
-letex -> Expr
-        = "let" space+ x:id space* "=" space* e1:exp space+ "in" space+ e2:exp
-           { Expr::LetEx(x, Box::new(e1), Box::new(e2)) }
-add_ast -> Expr
-        = e:sum { super::vecast_to_ast(e, |op, l, r| Expr::OpNode(op, Box::new(l), Box::new(r))) }
-sum -> (Vec<(Expr, Op)>, Expr)
-	= l:mul_ast space* op:addop space* r:sum { {let (mut x, y) = r; x.push((l, op)); (x, y)} }
-	/ e:mul_ast { (Vec::new(), e) }
-addop -> Op
-        = "+" { Op::Add }
-        / "-" { Op::Sub }
-mul_ast -> Expr
-        = e:product { super::vecast_to_ast(e, |op, l, r| Expr::OpNode(op, Box::new(l), Box::new(r))) }
-product -> (Vec<(Expr, Op)>, Expr)
-	= l:atom space* op:mulop space* r:product { {let (mut x, y) = r; x.push((l, op)); (x, y)} }
-	/ e:atom { (Vec::new(), e) }
-mulop -> Op
-        = "*" { Op::Mul }
-        / "/" { Op::Div }
-atom -> Expr
-	= number
-        / str
-	/ "if" space* cond:exp space* "then" space* e1:exp space*
-	"else" space* e2:exp space* "end"
-	{ Expr::IfNode(Box::new(cond), Box::new(e1), Box::new(e2)) }
-	/ v:id space* "(" space* e:args space* ")"
-           { {let mut t = e; t.reverse(); Expr::FunApp(v, t)} }
-        / v:id { Expr::Var(v) }
-	/ "(" space* v:exp space* ")" { v }
-args -> Vec<Expr>
-        = e:exp space* "," space* a:args { {let mut t = a; t.push(e); t} }
-        / e:exp { vec![e] }
 */
 integer_constant -> Expr
 	= [0-9]+ { Expr::Num(match_str.parse().unwrap()) }
@@ -145,7 +109,13 @@ str_internal -> String
 space -> ()
         = " " / "\n" / "\r"
 id -> String
-        = [a-zA-Z] [a-zA-Z0-9]* { match_str.to_string() }
+        = [a-zA-Z] [a-zA-Z0-9_]* { match_str.to_string() }
 type -> Type
-        = "int" { Type::Int }
-	/ "str" { Type::Str }
+        = "array" space+ "of" space+ t:id { Type::Array(t) }
+	/ "{" space* ls:type_fields_opt space* "}" { Type::Field(ls) }
+	/ ty:id { Type::Id(ty) }
+
+type_fields_opt -> Vec<TypeField>
+     = (i:id space* ":" space* ty:id { (i, ty) }) ++ (space* "," space*)
+     / { Vec::new() }
+

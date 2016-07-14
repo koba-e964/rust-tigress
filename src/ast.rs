@@ -39,13 +39,12 @@ pub enum Op {
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Dec {
+    Type(String, Type),
     Var(String, Option<String>, Expr), // second is type-id
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum Field {
-    Field(String, Box<Expr>),
-}
+pub type Field = (String, Expr);
+pub type TypeField = (String, String);
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Value {
@@ -53,13 +52,11 @@ pub enum Value {
     VStr(String),
 }
 
-/*
- * Copy trait cannot be implemented because we might add some recursive constructors.
- */
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
-    Int,
-    Str,
+    Id(String),
+    Field(Vec<TypeField>),
+    Array(String),
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -77,8 +74,8 @@ pub type TypedFunDec = (String, Vec<(String, Type)>, Type, TypedExpr);
 
 pub fn ty_of_ast(tast: &TypedExpr) -> Type {
     match *tast {
-        TypedExpr::Num(_) => Type::Int,
-        TypedExpr::Str(_) => Type::Str,
+        TypedExpr::Num(_) => Type::Id("int".to_string()),
+        TypedExpr::Str(_) => Type::Id("str".to_string()),
         TypedExpr::Var(_, ref ty) => ty.clone(),
         TypedExpr::OpNode(_, ref ty, _, _) => ty.clone(),
         TypedExpr::IfNode(_, ref ty, _, _) => ty.clone(),

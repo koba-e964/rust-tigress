@@ -52,17 +52,25 @@ mod tests {
     }
     #[test]
     fn let_test() {
+        use ast::Type::*;
         assert_eq!(parse("let var x:= 4 var y:=3 in x + y end"),
                    Let(vec![Dec::Var("x".to_string(), None, Num(4)), Dec::Var("y".to_string(), None, Num(3))],
                        Box::new(Seq(vec![OpNode(Op::Add,
                                                 Box::new(LVal(LValue::Id("x".to_string()))),
                                                 Box::new(LVal(LValue::Id("y".to_string()))))]))));
+        assert_eq!(parse("let type i = int in 3 end"),
+                   Let(vec![Dec::Type("i".to_string(), Type::Id("int".to_string()))], Box::new(Seq(vec![Num(3)]))));
+        assert_eq!(parse("let type int_array = array of int var x := int_array [4] of 0 in x end"),
+                   Let(vec![Dec::Type("int_array".to_string(), Array("int".to_string())), Dec::Var("x".to_string(), None, NewArray("int_array".to_string(), Box::new(Num(4)), Box::new(Num(0))))],
+                       Box::new(Seq(vec![LVal(LValue::Id("x".to_string()))]))));
+        assert_eq!(parse("let type web = {dat: int} in web {dat = 3} end"),
+                   Let(vec![Dec::Type("web".to_string(), Type::Field(vec![("dat".to_string(), "int".to_string())]))], Box::new(Seq(vec![NewStruct("web".to_string(), vec![("dat".to_string(), Num(3))])]))));
     }
     #[test]
     fn new_struct_test() {
         assert_eq!(parse("web {dat = 3 }"),
                    Expr::NewStruct("web".to_string(),
-                                   vec![Field::Field("dat".to_string(), Box::new(Expr::Num(3)))]));
+                                   vec![("dat".to_string(), Expr::Num(3))]));
         assert_eq!(parse("dummy {}"), Expr::NewStruct("dummy".to_string(), Vec::new()));
     }
 }
