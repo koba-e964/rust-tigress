@@ -15,6 +15,8 @@ pub enum Expr {
     For(String, Box<Expr>, Box<Expr>, Box<Expr>),
     Do(Box<Expr>, Box<Expr>),
     FunApp(String, Vec<Expr>),
+    NewStruct(String, Vec<Field>),
+    NewArray(String, Box<Expr>, Box<Expr>),
     Break,
 }
 
@@ -38,6 +40,11 @@ pub enum Op {
 #[derive(PartialEq, Clone, Debug)]
 pub enum Dec {
     Var(String, Option<String>, Expr), // second is type-id
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Field {
+    Field(String, Box<Expr>),
 }
 
 #[derive(PartialEq, Clone, Debug)]

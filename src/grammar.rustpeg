@@ -64,7 +64,10 @@ primary -> Expr
      / string_constant
      / integer_constant
      / "nil" { Expr::Nil }
-     / i:id "(" space* args:expr_list_opt space* ")" { Expr::FunApp(i, args) }
+     / i:id space* "(" space* args:expr_list_opt space* ")" { Expr::FunApp(i, args) }
+     / ty:id space* "{" space* ls:field_list_opt space* "}" { Expr::NewStruct(ty, ls) }
+     / ty:id space* "[" space* n:expr space* "]" space* "of" space* e:expr
+       { Expr::NewArray(ty, Box::new(n), Box::new(e)) }
      / "(" e:expr_seq_opt ")" { Expr::Seq(e) }
      / "break" { Expr::Break }
      / l:lvalue { Expr::LVal(l) }
@@ -75,6 +78,10 @@ expr_seq_opt -> Vec<Expr>
 
 expr_list_opt -> Vec<Expr>
      = expr ++ (space* "," space*)
+     / { Vec::new() }
+
+field_list_opt -> Vec<Field>
+     = (i:id space* "=" space* e:expr { Field::Field(i, Box::new(e)) }) ++ (space* "," space*)
      / { Vec::new() }
 
 lvalue -> LValue
