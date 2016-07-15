@@ -85,15 +85,19 @@ field_list_opt -> Vec<Field>
      / { Vec::new() }
 
 lvalue -> LValue
-     = l:lvalue_dots { {
-     let mut acc = LValue::Id(l[0].clone());
-     for i in 1 .. l.len() {
-         acc = LValue::Mem(Box::new(acc),l[i].clone());
+     = i:id ls:(space* lvalue_suffix)* { {
+     let mut acc = LValue::Id(i);
+     for v in ls {
+     	 acc = match v {
+	       Ok(name) => LValue::Mem(Box::new(acc),name),
+	       Err(expr) => LValue::Idx(Box::new(acc), Box::new(expr)),
+	 }
      }
      acc
      } }
-lvalue_dots -> Vec<String>
-     = id ++ (space* "." space*)
+lvalue_suffix -> Result<String, Expr>
+     = "[" space* e:expr space* "]" { Err(e) }
+     / "." space* i:id { Ok(i) }
 
 declaration_list -> Vec<Dec>
      = declaration ++ (space*)
