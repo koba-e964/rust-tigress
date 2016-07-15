@@ -24,7 +24,7 @@ peg! tigress_grammar(include_str!("grammar.rustpeg"));
 pub fn parse(s: &str) -> Expr {
     match tigress_grammar::top_expr(s) {
         Ok(ast) => ast,
-        Err(err) => { println!("{:?}", err); panic!(err) }
+        Err(err) => { println!("{:?} in parsing {}", err, s); panic!(err) }
     }
 }
 
@@ -79,6 +79,18 @@ mod tests {
                    Expr::NewStruct("web".to_string(),
                                    vec![("dat".to_string(), Expr::Num(3))]));
         assert_eq!(parse("dummy {}"), Expr::NewStruct("dummy".to_string(), Vec::new()));
+    }
+    #[test]
+    fn lvalue_member_test() {
+        use ast::LValue::*;
+        assert_eq!(parse("x.member.t"),
+                   LVal(Mem(Box::new(Mem(Box::new(Id("x".to_string())),
+                                         "member".to_string())),
+                            "t".to_string())));
+        assert_eq!(parse("x[4].go"),
+                   LVal(Mem(Box::new(Idx(Box::new(Id("x".to_string())),
+                                         Box::new(Num(4)))),
+                            "go".to_string())));
     }
     
 }

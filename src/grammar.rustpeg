@@ -85,7 +85,15 @@ field_list_opt -> Vec<Field>
      / { Vec::new() }
 
 lvalue -> LValue
-     = i:id { LValue::Id(i) } // not complete
+     = l:lvalue_dots { {
+     let mut acc = LValue::Id(l[0].clone());
+     for i in 1 .. l.len() {
+         acc = LValue::Mem(Box::new(acc),l[i].clone());
+     }
+     acc
+     } }
+lvalue_dots -> Vec<String>
+     = id ++ (space* "." space*)
 
 declaration_list -> Vec<Dec>
      = declaration ++ (space*)
@@ -93,14 +101,7 @@ declaration -> Dec
      = "type" space+ tyid:id space* "=" space* ty:type { Dec::Type(tyid, ty) }
      / "var" space+ i:id space* ty:(":" space* ty:id space* { ty })? ":=" space* e:expr { Dec::Var(i, ty, e) }
      / "function" space+ fname:id space* "(" space* fields:type_fields_opt space* ")" space* retty:(":" space* t:id space* { t })? "=" space* e:expr { Dec::Fun(fname, fields, retty, e) }
-/*
-fundec_space -> FunDec
-        = f:fundec space* { f }
-fundec -> FunDec
-        = "def" space+ f:id space*
-          "(" space* params:params space* ")" space* ":" space* ret_ty:type space*
-          "{" space* e:exp space* "}" { {let mut t = params; t.reverse(); (f, t, ret_ty, e)} }
-*/
+
 integer_constant -> Expr
 	= [0-9]+ { Expr::Num(match_str.parse().unwrap()) }
 string_constant -> Expr
@@ -108,9 +109,11 @@ string_constant -> Expr
 str_internal -> String
         = [^\"]* { match_str.to_string() }
 space -> ()
-        = " " / "\n" / "\r"
+        = " " / "\n" / "\r" / "\t" / "\x0c"
 id -> String
-        = [a-zA-Z] [a-zA-Z0-9_]* { match_str.to_string() }
+        = !keyword [a-zA-Z] [a-zA-Z0-9_]* { match_str.to_string() }
+keyword -> ()
+	= "let" / "nil" / "of" / "then" / "to" / "type" / "var" / "while"
 type -> Type
         = "array" space+ "of" space+ t:id { Type::Array(t) }
 	/ "{" space* ls:type_fields_opt space* "}" { Type::Field(ls) }
