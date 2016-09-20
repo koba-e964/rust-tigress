@@ -4,8 +4,12 @@ This project contains a tiny interpreter/compiler for Tigress, a subset of Tiger
 The interpreter and the compiler are written in Rust, whereas in [the original project](http://github.com/koba-e964/tigress) they are written in Haskell.
 
 ## Dependency
-This depends on nightly `rustc` and `cargo`. Nightly features are needed because of `rust-peg`.
-
+This depends on nightly `rustc` and `cargo`. Nightly features are needed because of `rust-peg` and `docopt_macros`.
+If you want to avoid using `docopt_macros` because it does not compile, you can work around it by
+```
+cargo run --features no-docopt-macros --no-default-features
+```
+. In this mode command-line arguments are simply ignored.
 ## Grammar
 The grammar of Tigress is similar to Tiger, but there are some modifications. The major difference between them is the array creation. While we create an array by `type-id [ expr ] of expr` in Tiger, we create one by `new type-id [ expr ] OF expr` (for the simplicity of parser) in Tigress. Besides, there are some features that are not supported in Tigress.
 
