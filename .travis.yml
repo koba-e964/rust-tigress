@@ -1,6 +1,9 @@
 language: rust
 rust:
   - nightly
+env:
+  - FEATURE_ARGS=
+  - FEATURE_ARGS="--features no-docopt-macros --no-default-features"
 script:
-  cargo build --verbose;
-  cargo test --verbose;
+  - cargo build --verbose $FEATURE_ARGS
+  - cargo test --verbose $FEATURE_ARGS
