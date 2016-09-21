@@ -131,19 +131,12 @@ mod tests {
     use interpret;
     use ast::{Expr, Op, Value};
     #[test]
-    fn operations_test() {
-        let ast1 = Expr::OpNode(Op::Sub, Box::new(Expr::Num(7)), Box::new(Expr::Num(4)));
-        assert_eq!(interpret::f(&Vec::new(), &ast1), Value::VNum(3));
-        let ast2 = Expr::OpNode(Op::Div, Box::new(Expr::Num(20)), Box::new(Expr::Num(4)));
-        assert_eq!(interpret::f(&Vec::new(), &ast2), Value::VNum(5));
-    }
-    #[test]
     fn letex_test() {
-        let ast1 = parse::parse("let x = 4 in x + x");
-        assert_eq!(interpret::f(&ast1.0, &ast1.1), Value::VNum(8));
-        let ast2 = parse::parse("let x = 4 in let x = 3 in x + x");
-        assert_eq!(interpret::f(&ast2.0, &ast2.1), Value::VNum(6));
-        let ast3 = parse::parse("let x = 4 in (let x = 3 in x) + x");
-        assert_eq!(interpret::f(&ast3.0, &ast3.1), Value::VNum(7));
+        let ast1 = parse::parse("let var x := 4 in x + x end");
+        assert_eq!(interpret::f(&ast1), Value::VNum(8));
+        let ast2 = parse::parse("let var x := 4 in let var x := 3 in x + x end end");
+        assert_eq!(interpret::f(&ast2), Value::VNum(6));
+        let ast3 = parse::parse("let var x := 4 in (let var x := 3 in x end) + x end");
+        assert_eq!(interpret::f(&ast3), Value::VNum(7));
     }
 }
