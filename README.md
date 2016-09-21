@@ -21,7 +21,7 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 | 2.2 Return values | not supported |
 | 2.3 Record and Array Literals | not supported |
 | 2.4 Function Calls | not supported |
-| 2.5 Operators | not supported |
+| 2.5 Operators | arithmetic and comparisons are supported |
 | 2.6 Assignment | ok |
 | 2.7 nil | ok |
 | 2.8 Flow control | `for` is supported |

@@ -31,6 +31,10 @@ fn arithmetic(op: Op, v1: i64, v2: i64) -> i64 {
         Op::Sub => v1 - v2,
         Op::Mul => v1 * v2,
         Op::Div => v1 / v2,
+        Op::Lt => if v1 < v2 { 1 } else { 0 },
+        Op::Gt => if v1 > v2 { 1 } else { 0 },
+        Op::Le => if v1 <= v2 { 1 } else { 0 },
+        Op::Ge => if v1 >= v2 { 1 } else { 0 },
         _ => panic!("internal error (>_<)"),
     }
 }
@@ -66,11 +70,15 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             },
 
         Expr::OpNode(op, ref e1, ref e2) =>
-            if op == Op::Add || op == Op::Sub || op == Op::Mul || op == Op::Div {
+            if op == Op::Add || op == Op::Sub || op == Op::Mul || op == Op::Div || op == Op::Lt || op == Op::Gt || op == Op::Le || op == Op::Ge {
                 match (try!(f_sub(e1, env, varpool)), try!(f_sub(e2, env, varpool))) {
                     (Value::VNum(i1), Value::VNum(i2)) => Ok(Value::VNum(arithmetic(op, i1, i2))),
                     _ => panic!("+ failed"),
                 }
+            } else if op == Op::Eq || op == Op::Ne {
+                let (v1, v2) = (try!(f_sub(e1, env, varpool)), try!(f_sub(e2, env, varpool)));
+                let res = (op == Op::Ne) ^ (v1 == v2);
+                Ok(Value::VNum(if res { 1 } else { 0 }))
             } else {
                 panic!("f_sub Expr::OpNode comparison");
             },
@@ -116,7 +124,10 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     let cp_env = define_var(var, Value::VNum(st_val), env, varpool);
                     for i in st_val .. (en_val + 1) {
                         update_var(var, Value::VNum(i), &cp_env, varpool);
-                        let result = f_sub(body, &cp_env, varpool); // TODO loopbreak
+                        let result = f_sub(body, &cp_env, varpool);
+                        if let Err(LoopBreak::LoopBreak) = result {
+                            break;
+                        }
                     }
                     return Ok(Value::VNil);
                 }
@@ -164,5 +175,20 @@ mod tests {
         assert_eq!(interpret::f(&ast2), Value::VNum(6));
         let ast3 = parse::parse("let var x := 4 in (let var x := 3 in x end) + x end");
         assert_eq!(interpret::f(&ast3), Value::VNum(7));
+    }
+    #[test]
+    fn comp_test() {
+        let lt1 = parse::parse("2 < 5");
+        assert_eq!(interpret::f(&lt1), Value::VNum(1));
+        let lt2 = parse::parse("4 < 1");
+        assert_eq!(interpret::f(&lt2), Value::VNum(0));
+        let eq1 = parse::parse("2 = 2");
+        assert_eq!(interpret::f(&eq1), Value::VNum(1));
+        let eq2 = parse::parse("2 = 5");
+        assert_eq!(interpret::f(&eq2), Value::VNum(0));
+        let neq1 = parse::parse("2 <> 4");
+        assert_eq!(interpret::f(&neq1), Value::VNum(1));
+        let neq2 = parse::parse("2 <> 2");
+        assert_eq!(interpret::f(&neq2), Value::VNum(0));
     }
 }
