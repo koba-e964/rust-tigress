@@ -10,8 +10,8 @@ no-docopt-macros = []
 [dependencies]
 peg = "0.3.13"
 rustc-serialize = "0.3"
-docopt = "0.6.81"
-docopt_macros = { version = "0.6.84", optional = true }
+docopt = ">=0.6.83"
+docopt_macros = { version = ">=0.6.86", optional = true }
 
 [[bin]]
 name = "calc-rust"

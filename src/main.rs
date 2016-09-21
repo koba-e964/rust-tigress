@@ -1,5 +1,5 @@
 #![feature(plugin)]
-#[cfg_attr(not(feature = "no-docopt-macros"),plugin(docopt_macros))]
+#![cfg_attr(not(feature = "no-docopt-macros"),plugin(docopt_macros))]
 
 extern crate calc;
 extern crate rustc_serialize;
