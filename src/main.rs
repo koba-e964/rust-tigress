@@ -9,7 +9,7 @@ use std::io;
 use std::io::{Read,Write};
 use std::fs::File;
 use calc::parse;
-// use calc::interpret;
+use calc::interpret;
 // use calc::typing;
 
 
@@ -61,14 +61,13 @@ fn main() {
     }
     let ast = parse::parse(&s);
     println!("{:?}", ast);
-    /*
     if args.flag_verbose {
-        println!("fundecs: {:?}", fundecs);
         println!("{:?}", ast);
+        /*
         if args.flag_typing {
             println!("typing: {:?}", typing::f(&fundecs, &ast));
         }
+         */
     }
-    println!("result = {:?}", interpret::f(&fundecs, &ast));
-     */
+    println!("result = {:?}", interpret::f(&ast));
 }

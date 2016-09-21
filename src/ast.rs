@@ -51,6 +51,7 @@ pub type TypeField = (String, String);
 pub enum Value {
     VNum(i64),
     VStr(String),
+    VNil,
 }
 
 #[derive(PartialEq, Clone, Debug)]

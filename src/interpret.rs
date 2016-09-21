@@ -1,86 +1,107 @@
-use ast::{AST, FunDec, Value, Op};
+use ast::{Expr, FunDec, Value, Op};
 use std::collections::HashMap;
 
-fn f_sub(fundecs: &[FunDec], ast: &AST, env: &mut HashMap<String, Value>) -> Value {
+enum LoopBreak {
+    LoopBreak,
+}
+type Env = (HashMap<String, Value>, HashMap<String, FunDec>, HashMap<String, ()> /* types */);
+
+fn get_var(name: &str, env: &Env) -> Result<Value, LoopBreak> {
+    Ok(env.0.get(name).expect("variable not found").clone())
+}
+fn update_var(name: &str, val: Value, env: &Env) -> Env {
+    let mut cp_env = env.0.clone();
+    cp_env.insert(name.to_string(), val);
+    (cp_env, env.1.clone(), env.2.clone())
+}
+
+fn arithmetic(op: Op, v1: i64, v2: i64) -> i64 {
+    match op {
+        Op::Add => v1 + v2,
+        Op::Sub => v1 - v2,
+        Op::Mul => v1 * v2,
+        Op::Div => v1 / v2,
+        _ => panic!("www"),
+    }
+}
+
+fn f_sub(ast: &Expr, env: &Env) -> Result<Value, LoopBreak> {
     match *ast {
-        AST::Num(i) => Value::VNum(i),
-        AST::Str(ref str) => Value::VStr(str.clone()),
-        AST::OpNode(Op::Add, ref e1, ref e2) =>
-            match (f_sub(fundecs, e1, env), f_sub(fundecs, e2, env)) {
-                (Value::VNum(i1), Value::VNum(i2)) => Value::VNum(i1 + i2),
-                (Value::VStr(s1), Value::VStr(s2)) => { let mut s = s1.to_string(); s.push_str(&s2); Value::VStr(s)},
-                _ => panic!("+ failed"),
-            },
-        AST::OpNode(Op::Sub, ref e1, ref e2) =>
-            match (f_sub(fundecs, e1, env), f_sub(fundecs, e2, env)) {
-                (Value::VNum(i1), Value::VNum(i2)) => Value::VNum(i1 - i2),
-                _ => panic!("- failed"),
+        Expr::Num(i) => Ok(Value::VNum(i)),
+        Expr::Str(ref str) => Ok(Value::VStr(str.clone())),
+        Expr::Var(ref x) => get_var(x, env),
+        Expr::LVal(ref str) => panic!("f_sub Expr::LVal"),
+        Expr::Neg(ref e) =>
+            match try!(f_sub(e, env)) {
+                Value::VNum(i) => Ok(Value::VNum(-i)),
+                _ => panic!("Expr::Neg failed"),
             },
 
-        AST::OpNode(Op::Mul, ref e1, ref e2) =>
-            match (f_sub(fundecs, e1, env), f_sub(fundecs, e2, env)) {
-                (Value::VNum(i1), Value::VNum(i2)) => Value::VNum(i1 * i2),
-                _ => panic!("* failed"),
+        Expr::OpNode(op, ref e1, ref e2) =>
+            if op == Op::Add || op == Op::Sub || op == Op::Mul || op == Op::Div {
+                match (try!(f_sub(e1, env)), try!(f_sub(e2, env))) {
+                    (Value::VNum(i1), Value::VNum(i2)) => Ok(Value::VNum(arithmetic(op, i1, i2))),
+                    _ => panic!("+ failed"),
+                }
+            } else {
+                panic!("f_sub Expr::OpNode comparison");
             },
-        AST::OpNode(Op::Div, ref e1, ref e2) =>
-            match (f_sub(fundecs, e1, env), f_sub(fundecs, e2, env)) {
-                (Value::VNum(i1), Value::VNum(i2)) => Value::VNum(i1 / i2),
-                _ => panic!("/ failed"),
-            },
-        AST::IfNode(ref cond, ref e_true, ref e_false) => 
-            match f_sub(fundecs, cond, env) {
-                Value::VNum(0) => f_sub(fundecs, e_false, env),
-                Value::VNum(_) => f_sub(fundecs, e_true, env),
+        Expr::IfNode(ref cond, ref e_true, ref e_false) => 
+            match try!(f_sub(cond, env)) {
+                Value::VNum(0) => f_sub(e_false, env),
+                Value::VNum(_) => f_sub(e_true, env),
                 _ => panic!("Condition of if has to be an integer."),
             },
-        AST::Var(ref x) => env.get(x).expect("variable not found").clone(),
-        AST::LetEx(ref x, ref e1, ref e2) => {
-            let v1 = f_sub(fundecs, e1, env);
-            let old = env.insert(x.clone(), v1);
-            let v2 = f_sub(fundecs, e2, env);
-            env.remove(x).unwrap();
-            if let Some(o) = old {
-                env.insert(x.clone(), o);
+        Expr::Nil => Ok(Value::VNil),
+        Expr::LAsgn(ref lval, ref e) => panic!("f_sub Expr::LAsgn"),
+        Expr::Seq(ref es) => {
+            for e in es {
+                try!(f_sub(e, env));
             }
-            v2
-        }
-        AST::FunApp(ref f, ref es) => {
+            Ok(Value::VNil)
+        },
+        Expr::Let(ref asgns, ref e2) => {
+            panic!("f_sub for Expr::Let");
+        },
+        Expr::For(ref var, ref st, ref en, ref body) => {
+            panic!("f_sub Expr::For");
+        },
+        Expr::Do(ref cond, ref body) => {
+            panic!("f_sub Expr::Do");
+        },
+        Expr::FunApp(ref f, ref es) => {
             // evaluate arguments from left to right
             let n = es.len();
             let mut args = vec![Value::VNum(0); n];
             for i in 0 .. n {
-                args[i] = f_sub(fundecs, &es[i], env);
+                args[i] = try!(f_sub(&es[i], env));
             }
             let mut cp_env = env.clone();
-            let fundec = fundecs.iter()
-                .filter(|fundec| fundec.0 == *f).next()
-                .expect("function not found");
-            let m = fundec.1.len(); // #param
-            if n != m {
-                panic!("The number of parameters does not match the number of arguments.");
-            }
-            for i in 0 .. n {
-                cp_env.insert(fundec.1[i].0.clone(), args[i].clone()); // TODO This second cloning is unnecessary. 
-            }
-            f_sub(fundecs, &fundec.3, &mut cp_env)
+            panic!("FunApp");
         },
+        Expr::NewStruct(ref tyname, ref fields) => panic!("f_sub Expr::NewStruct"),
+        Expr::NewArray(ref tyname, ref e, ref cnt) => panic!("f_sub Expr::NewArray"),
+        Expr::Break => Err(LoopBreak::LoopBreak),
     }
 }
 
-pub fn f(fundecs: &[FunDec], ast: &AST) -> Value {
-    f_sub(fundecs, ast, &mut HashMap::new())
+pub fn f(ast: &Expr) -> Value {
+    match f_sub(ast, &(HashMap::new(), HashMap::new(), HashMap::new())) {
+        Ok(result) => result,
+        Err(_) => panic!("f err"),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use parse;
     use interpret;
-    use ast::{AST, Op, Value};
+    use ast::{Expr, Op, Value};
     #[test]
     fn operations_test() {
-        let ast1 = AST::OpNode(Op::Sub, Box::new(AST::Num(7)), Box::new(AST::Num(4)));
+        let ast1 = Expr::OpNode(Op::Sub, Box::new(Expr::Num(7)), Box::new(Expr::Num(4)));
         assert_eq!(interpret::f(&Vec::new(), &ast1), Value::VNum(3));
-        let ast2 = AST::OpNode(Op::Div, Box::new(AST::Num(20)), Box::new(AST::Num(4)));
+        let ast2 = Expr::OpNode(Op::Div, Box::new(Expr::Num(20)), Box::new(Expr::Num(4)));
         assert_eq!(interpret::f(&Vec::new(), &ast2), Value::VNum(5));
     }
     #[test]
