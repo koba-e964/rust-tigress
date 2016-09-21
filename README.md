@@ -17,14 +17,14 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 |item|status (interpreter) |
 |---|---|
 | 1 Lexical Aspects | ok |
-| 2.1 Lvalues | not supported |
+| 2.1 Lvalues | ok |
 | 2.2 Return values | not supported |
 | 2.3 Record and Array Literals | not supported |
 | 2.4 Function Calls | not supported |
 | 2.5 Operators | not supported |
-| 2.6 Assignment | not supported |
-| 2.7 nil | not supported |
-| 2.8 Flow control | not supported |
+| 2.6 Assignment | ok |
+| 2.7 nil | ok |
+| 2.8 Flow control | `for` is supported |
 | 2.9 Let | not supported |
 | 3 Declarations| not supported |
 | 4 Standard Library | not supported |
