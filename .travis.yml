@@ -7,3 +7,4 @@ env:
 script:
   - cargo build --verbose $FEATURE_ARGS
   - cargo test --verbose $FEATURE_ARGS
+  - if [ "$FEATURE_ARGS" = "" ]; then echo sample/*.tiger | xargs -n 1 cargo run; fi
