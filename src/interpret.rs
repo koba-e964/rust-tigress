@@ -31,7 +31,25 @@ fn arithmetic(op: Op, v1: i64, v2: i64) -> i64 {
         Op::Sub => v1 - v2,
         Op::Mul => v1 * v2,
         Op::Div => v1 / v2,
-        _ => panic!("www"),
+        _ => panic!("internal error (>_<)"),
+    }
+}
+
+fn type_check(val: &Value, ty: &str) -> Result<(), LoopBreak> {
+    if ty == "int" {
+        if let Value::VNum(_) = *val {
+        } else {
+            panic!("type_check failed");
+        }
+        Ok(())
+    } else if ty == "string" {
+        if let Value::VStr(_) = *val {
+        } else {
+            panic!("type_check failed");
+        }
+        Ok(())
+    } else {
+        panic!("type_check not implemented");
     }
 }
 
@@ -80,7 +98,12 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             for dec in decs {
                 match *dec {
                     Dec::Var(ref name, ref opt_ty, ref e) => {
-                        cp_env = define_var(name, try!(f_sub(e, env, varpool)), &cp_env, varpool);
+                        let val = try!(f_sub(e, env, varpool));
+                        // type-check
+                        if let Some(ref ty) = *opt_ty {
+                            try!(type_check(&val, ty));
+                        }
+                        cp_env = define_var(name, val, &cp_env, varpool);
                     }
                     _ => panic!("f_sub Expr::Let not supported")
                 }
@@ -134,6 +157,8 @@ mod tests {
     fn letex_test() {
         let ast1 = parse::parse("let var x := 4 in x + x end");
         assert_eq!(interpret::f(&ast1), Value::VNum(8));
+        let ast1_typed = parse::parse("let var x: int := 4 in x + x end");
+        assert_eq!(interpret::f(&ast1_typed), Value::VNum(8));
         let ast2 = parse::parse("let var x := 4 in let var x := 3 in x + x end end");
         assert_eq!(interpret::f(&ast2), Value::VNum(6));
         let ast3 = parse::parse("let var x := 4 in (let var x := 3 in x end) + x end");
