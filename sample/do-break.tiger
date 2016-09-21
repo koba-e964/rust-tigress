@@ -1,0 +1,8 @@
+let var x := 0 var i := 0 in
+    while i <= 10 do (
+        x := x + i;
+        if i >= 5 then break;
+	i := i + 1
+    );
+    x - 15
+end
