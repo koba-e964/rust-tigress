@@ -3,7 +3,6 @@
 pub enum Expr {
     Num(i64),
     Str(String),
-    Var(String),
     LVal(LValue),
     Neg(Box<Expr>),
     OpNode(Op, Box<Expr>, Box<Expr>),
