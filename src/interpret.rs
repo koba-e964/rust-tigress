@@ -113,8 +113,9 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
         Expr::For(ref var, ref st, ref en, ref body) => {
             if let Value::VNum(st_val) = try!(f_sub(st, env, varpool)) {
                 if let Value::VNum(en_val) = try!(f_sub(en, env, varpool)) {
+                    let cp_env = define_var(var, Value::VNum(st_val), env, varpool);
                     for i in st_val .. (en_val + 1) {
-                        let cp_env = define_var(var, Value::VNum(i), env, varpool);
+                        update_var(var, Value::VNum(i), &cp_env, varpool);
                         let result = f_sub(body, &cp_env, varpool); // TODO loopbreak
                     }
                     return Ok(Value::VNil);
