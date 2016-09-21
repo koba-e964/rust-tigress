@@ -1,0 +1,3 @@
+let var x: int := 104 in
+    x - 104
+end
