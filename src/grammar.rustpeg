@@ -22,7 +22,7 @@ expr -> Expr
      / expr0
 
 expr0 -> Expr // if
-      = "if" space* c:expr space* "then" space* e1:expr1 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(Expr::Nil)) }
+      = "if" space* c:expr space* "then" space* e1:expr1 !(space+ "else") { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(Expr::Nil)) }
       / expr1
 expr1 -> Expr // ifelse
       = "if" space* c:expr space* "then" space* e1:expr2 space* "else" space* e2:expr2 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(e2)) }
