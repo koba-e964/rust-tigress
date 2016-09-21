@@ -11,7 +11,7 @@ cargo run --features no-docopt-macros --no-default-features
 ```
 . In this mode command-line arguments are simply ignored.
 ## Grammar
-The grammar of Tigress is similar to Tiger, but there are some modifications. The major difference between them is the array creation. While we create an array by `type-id [ expr ] of expr` in Tiger, we create one by `new type-id [ expr ] OF expr` (for the simplicity of parser) in Tigress. Besides, there are some features that are not supported in Tigress.
+The grammar of Tigress is similar to Tiger, but there are some modifications. There are some features that are not supported in Tigress.
 
 ## functionality
 |item|status (interpreter) |
