@@ -68,7 +68,7 @@ primary -> Expr
      / ty:id space* "{" space* ls:field_list_opt space* "}" { Expr::NewStruct(ty, ls) }
      / ty:id space* "[" space* n:expr space* "]" space* "of" space* e:expr
        { Expr::NewArray(ty, Box::new(n), Box::new(e)) }
-     / "(" e:expr_seq_opt ")" { Expr::Seq(e) }
+     / "(" space* e:expr_seq_opt space* ")" { Expr::Seq(e) }
      / "break" { Expr::Break }
      / l:lvalue { Expr::LVal(l) }
 
