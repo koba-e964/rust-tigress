@@ -70,35 +70,38 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             },
 
         Expr::OpNode(op, ref e1, ref e2) =>
-            if op == Op::Add || op == Op::Sub || op == Op::Mul || op == Op::Div || op == Op::Lt || op == Op::Gt || op == Op::Le || op == Op::Ge {
-                match (try!(f_sub(e1, env, varpool)), try!(f_sub(e2, env, varpool))) {
-                    (Value::VNum(i1), Value::VNum(i2)) => Ok(Value::VNum(arithmetic(op, i1, i2))),
-                    _ => panic!("+ failed"),
-                }
-            } else if op == Op::Eq || op == Op::Ne {
-                let (v1, v2) = (try!(f_sub(e1, env, varpool)), try!(f_sub(e2, env, varpool)));
-                let res = (op == Op::Ne) ^ (v1 == v2);
-                Ok(Value::VNum(if res { 1 } else { 0 }))
-            } else {
-                match op {
-                    Op::Or => {
-                        let v1 = try!(f_sub(e1, env, varpool));
-                        match v1 {
-                            Value::VNum(0) => f_sub(e2, env, varpool),
-                            Value::VNum(_) => Ok(v1),
-                            _ => panic!("type error in Op::Or"),
-                        }
-                    },
-                    Op::And => {
-                        let v1 = try!(f_sub(e1, env, varpool));
-                        match v1 {
-                            Value::VNum(0) => Ok(v1),
-                            Value::VNum(_) => f_sub(e2, env, varpool),
-                            _ => panic!("type error in Op::And"),
-                        }
-                    },
-                    _ => panic!("(>_<)")
-                }
+            match op {
+                Op::Add | Op::Sub | Op::Mul | Op::Div |
+                Op::Lt | Op::Gt | Op::Le | Op::Ge => {
+                    match (try!(f_sub(e1, env, varpool)),
+                           try!(f_sub(e2, env, varpool))) {
+                        (Value::VNum(i1), Value::VNum(i2)) =>
+                            Ok(Value::VNum(arithmetic(op, i1, i2))),
+                        _ => panic!("arithmetic operation failed"),
+                    }
+                },
+                Op::Eq | Op::Ne  => {
+                    let (v1, v2) = (try!(f_sub(e1, env, varpool)),
+                                    try!(f_sub(e2, env, varpool)));
+                    let res = (op == Op::Ne) ^ (v1 == v2);
+                    Ok(Value::VNum(if res { 1 } else { 0 }))
+                },
+                Op::Or => {
+                    let v1 = try!(f_sub(e1, env, varpool));
+                    match v1 {
+                        Value::VNum(0) => f_sub(e2, env, varpool),
+                        Value::VNum(_) => Ok(v1),
+                        _ => panic!("type error in Op::Or"),
+                    }
+                },
+                Op::And => {
+                    let v1 = try!(f_sub(e1, env, varpool));
+                    match v1 {
+                        Value::VNum(0) => Ok(v1),
+                        Value::VNum(_) => f_sub(e2, env, varpool),
+                        _ => panic!("type error in Op::And"),
+                    }
+                },
             },
         Expr::IfNode(ref cond, ref e_true, ref e_false) => 
             match try!(f_sub(cond, env, varpool)) {
