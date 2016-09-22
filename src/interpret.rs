@@ -80,7 +80,25 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                 let res = (op == Op::Ne) ^ (v1 == v2);
                 Ok(Value::VNum(if res { 1 } else { 0 }))
             } else {
-                panic!("f_sub Expr::OpNode comparison");
+                match op {
+                    Op::Or => {
+                        let v1 = try!(f_sub(e1, env, varpool));
+                        match v1 {
+                            Value::VNum(0) => f_sub(e2, env, varpool),
+                            Value::VNum(_) => Ok(v1),
+                            _ => panic!("type error in Op::Or"),
+                        }
+                    },
+                    Op::And => {
+                        let v1 = try!(f_sub(e1, env, varpool));
+                        match v1 {
+                            Value::VNum(0) => Ok(v1),
+                            Value::VNum(_) => f_sub(e2, env, varpool),
+                            _ => panic!("type error in Op::And"),
+                        }
+                    },
+                    _ => panic!("(>_<)")
+                }
             },
         Expr::IfNode(ref cond, ref e_true, ref e_false) => 
             match try!(f_sub(cond, env, varpool)) {
@@ -164,7 +182,7 @@ pub fn f(ast: &Expr) -> Value {
 mod tests {
     use parse;
     use interpret;
-    use ast::{Expr, Op, Value};
+    use ast::{Value};
     #[test]
     fn letex_test() {
         let ast1 = parse::parse("let var x := 4 in x + x end");
@@ -190,5 +208,16 @@ mod tests {
         assert_eq!(interpret::f(&neq1), Value::VNum(1));
         let neq2 = parse::parse("2 <> 2");
         assert_eq!(interpret::f(&neq2), Value::VNum(0));
+    }
+    #[test]
+    fn logic_test() {
+        let and1 = parse::parse("2 & 3");
+        assert_eq!(interpret::f(&and1), Value::VNum(3));
+        let and2 = parse::parse("0 & 3");
+        assert_eq!(interpret::f(&and2), Value::VNum(0));
+        let or1 = parse::parse("2 | 152");
+        assert_eq!(interpret::f(&or1), Value::VNum(2));
+        let or2 = parse::parse("0 | 155");
+        assert_eq!(interpret::f(&or2), Value::VNum(155));
     }
 }
