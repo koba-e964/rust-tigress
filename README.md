@@ -20,12 +20,12 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 | 2.1 Lvalues | ok |
 | 2.2 Return values | not supported |
 | 2.3 Record and Array Literals | not supported |
-| 2.4 Function Calls | not supported |
+| 2.4 Function Calls | ok (environment for closure is not supported) |
 | 2.5 Operators | ok |
 | 2.6 Assignment | ok |
 | 2.7 nil | ok |
 | 2.8 Flow control | `for` and `do` are supported |
-| 2.9 Let | not supported |
-| 3 Declarations| not supported |
+| 2.9 Let | var, function are supported |
+| 3 Declarations | not supported |
 | 4 Standard Library | not supported |
 

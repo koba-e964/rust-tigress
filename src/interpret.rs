@@ -1,4 +1,4 @@
-use ast::{Expr, Dec, LValue, FunDec, Value, Op};
+use ast::{Expr, Dec, LValue, FunDec, TypeId, Value, Op};
 use std::collections::HashMap;
 
 enum LoopBreak {
@@ -25,6 +25,11 @@ fn update_var(name: &str, val: Value, env: &Env, varpool: &mut VarPool) {
     varpool[idx] = val;
 }
 
+fn define_fun(name: &str, args: &Vec<(String, TypeId)>, opt_ty: &Option<TypeId>, body: &Expr, env: &Env) -> Env {
+    let mut cp_funenv = env.1.clone();
+    cp_funenv.insert(name.to_string(), (name.to_string(), args.clone(), opt_ty.clone(), body.clone()));
+    (env.0.clone(), cp_funenv, env.2.clone())    
+}
 fn arithmetic(op: Op, v1: i64, v2: i64) -> i64 {
     match op {
         Op::Add => v1 + v2,
@@ -135,7 +140,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                         cp_env = define_var(name, val, &cp_env, varpool);
                     }
                     Dec::Fun(ref name, ref args, ref opt_ty, ref body) => {
-                        panic!("function definition not implemented")
+                        cp_env = define_fun(name, args, opt_ty, body, &cp_env);
                     }
                     _ => panic!("f_sub Expr::Let not supported")
                 }
@@ -154,7 +159,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                             break;
                         }
                     }
-                    return Ok(Value::VNil);
+                    return Ok(Value::VNoResult);
                 }
             }
             panic!("f_sub Expr::For");
@@ -162,7 +167,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
         Expr::Do(ref cond, ref body) => {
             loop {
                 if let Value::VNum(cval) = try!(f_sub(cond, env, varpool)) {
-                    if (cval == 0) {
+                    if cval == 0 {
                         break;
                     }
                     let result = f_sub(body, env, varpool);
@@ -172,17 +177,34 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     }
                 }
             }
-            return Ok(Value::VNil);
+            return Ok(Value::VNoResult);
         },
         Expr::FunApp(ref f, ref es) => {
             // evaluate arguments from left to right
-            let n = es.len();
-            let mut args = vec![Value::VNum(0); n];
-            for i in 0 .. n {
-                args[i] = try!(f_sub(&es[i], env, varpool));
+            match env.1.get(f) {
+                Some(&(_, ref params, ref opt_retty, ref body)) => {
+                    let n = es.len();
+                    let mut args = vec![Value::VNum(0); n];
+                    if params.len() != n {
+                        panic!("wrong number of argument(s)");
+                    }
+                    for i in 0 .. n {
+                        args[i] = try!(f_sub(&es[i], env, varpool));
+                        try!(type_check(&args[i], &params[i].1));
+                    }
+                    let mut cp_env = env.clone();
+                    for i in 0 .. n {
+                        cp_env = define_var(&params[i].0, args[i].clone(), &cp_env, varpool);
+                    }
+                    // TODO env handling
+                    let result = try!(f_sub(&body, &cp_env, varpool));
+                    if let Some(ref retty) = *opt_retty {
+                        try!(type_check(&result, retty));
+                    }
+                    Ok(result)
+                },
+                None => panic!("FunApp"),
             }
-            let mut cp_env = env.clone();
-            panic!("FunApp");
         },
         Expr::NewStruct(ref tyname, ref fields) => panic!("f_sub Expr::NewStruct"),
         Expr::NewArray(ref tyname, ref e, ref cnt) => panic!("f_sub Expr::NewArray"),

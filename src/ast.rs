@@ -26,7 +26,7 @@ pub enum LValue {
     Idx(Box<LValue>, Box<Expr>),
 }
 
-pub type FunDec = (String, Vec<(String, Type)>, Type, Expr);
+pub type FunDec = (String, Vec<(String, TypeId)>, Option<TypeId>, Expr);
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Op {
@@ -51,11 +51,13 @@ pub enum Value {
     VNum(i64),
     VStr(String),
     VNil,
+    VNoResult, // indicates that an expression does't return a value
 }
 
+pub type TypeId = String;
 #[derive(PartialEq, Clone, Debug)]
 pub enum Type {
-    Id(String),
+    Id(TypeId),
     Field(Vec<TypeField>),
     Array(String),
 }
