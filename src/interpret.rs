@@ -3,13 +3,17 @@ use std::collections::HashMap;
 
 enum LoopBreak {
     LoopBreak,
+    Err(String),
 }
 type Env = (HashMap<String, usize> /* holds pointers */, HashMap<String, FunDec>, HashMap<String, ()> /* types */);
 type VarPool = Vec<Value>; /* vector for variables */
 
 fn get_var(name: &str, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBreak> {
-    let &idx = env.0.get(name).expect("variable not found");
-    Ok(varpool[idx].clone()) // TODO fix, because struct type must not be cloned here
+    if let Some(&idx) = env.0.get(name) {
+        Ok(varpool[idx].clone()) // TODO fix, because struct type must not be cloned here
+    } else {
+        Err(LoopBreak::Err("variable not found".to_string()))
+    }
 }
 /* Even if name is already defined, this function creates another variable and hides the old one. */
 fn define_var(name: &str, val: Value, env: &Env, varpool: &mut VarPool) -> Env {
@@ -20,9 +24,13 @@ fn define_var(name: &str, val: Value, env: &Env, varpool: &mut VarPool) -> Env {
     (cp_env, env.1.clone(), env.2.clone())
 }
 
-fn update_var(name: &str, val: Value, env: &Env, varpool: &mut VarPool) {
-    let &idx = env.0.get(name).expect("variable not found");
-    varpool[idx] = val;
+fn update_var(name: &str, val: Value, env: &Env, varpool: &mut VarPool) -> Result<(), LoopBreak>{
+    if let Some(&idx) = env.0.get(name) {
+        varpool[idx] = val;
+        Ok(())
+    } else {
+        Err(LoopBreak::Err("variable not found".to_string()))
+    }
 }
 
 fn define_fun(name: &str, args: &Vec<(String, TypeId)>, opt_ty: &Option<TypeId>, body: &Expr, env: &Env) -> Env {
@@ -47,16 +55,16 @@ fn arithmetic(op: Op, v1: i64, v2: i64) -> i64 {
 fn type_check(val: &Value, ty: &str) -> Result<(), LoopBreak> {
     if ty == "int" {
         if let Value::VNum(_) = *val {
+            Ok(())
         } else {
-            panic!("type_check failed");
+            Err(LoopBreak::Err("type_check failed".to_string()))
         }
-        Ok(())
     } else if ty == "string" {
         if let Value::VStr(_) = *val {
+            Ok(())
         } else {
-            panic!("type_check failed");
+            Err(LoopBreak::Err("type_check failed".to_string()))
         }
-        Ok(())
     } else {
         panic!("type_check not implemented");
     }
@@ -71,7 +79,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
         Expr::Neg(ref e) =>
             match try!(f_sub(e, env, varpool)) {
                 Value::VNum(i) => Ok(Value::VNum(-i)),
-                _ => panic!("Expr::Neg failed"),
+                _ => Err(LoopBreak::Err("Expr::Neg failed".to_string())),
             },
 
         Expr::OpNode(op, ref e1, ref e2) =>
@@ -82,7 +90,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                            try!(f_sub(e2, env, varpool))) {
                         (Value::VNum(i1), Value::VNum(i2)) =>
                             Ok(Value::VNum(arithmetic(op, i1, i2))),
-                        _ => panic!("arithmetic operation failed"),
+                        _ => Err(LoopBreak::Err("arithmetic operation failed".to_string())),
                     }
                 },
                 Op::Eq | Op::Ne => {
@@ -96,7 +104,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     match v1 {
                         Value::VNum(0) => f_sub(e2, env, varpool),
                         Value::VNum(_) => Ok(v1),
-                        _ => panic!("type error in Op::Or"),
+                        _ => Err(LoopBreak::Err("type error in Op::Or".to_string())),
                     }
                 },
                 Op::And => {
@@ -104,7 +112,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     match v1 {
                         Value::VNum(0) => Ok(v1),
                         Value::VNum(_) => f_sub(e2, env, varpool),
-                        _ => panic!("type error in Op::And"),
+                        _ => Err(LoopBreak::Err("type error in Op::And".to_string())),
                     }
                 },
             },
@@ -112,11 +120,11 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             match try!(f_sub(cond, env, varpool)) {
                 Value::VNum(0) => f_sub(e_false, env, varpool),
                 Value::VNum(_) => f_sub(e_true, env, varpool),
-                _ => panic!("Condition of if has to be an integer."),
+                _ => Err(LoopBreak::Err("Condition of if has to be an integer.".to_string())),
             },
         Expr::Nil => Ok(Value::VNil),
         Expr::LAsgn(LValue::Id(ref name), ref e) => {
-            update_var(name, try!(f_sub(e, env, varpool)), env, varpool);
+            try!(update_var(name, try!(f_sub(e, env, varpool)), env, varpool));
             Ok(Value::VNil)
         },
         Expr::LAsgn(ref lval, ref e) => panic!("f_sub Expr::LAsgn"),
@@ -152,7 +160,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                 if let Value::VNum(en_val) = try!(f_sub(en, env, varpool)) {
                     let cp_env = define_var(var, Value::VNum(st_val), env, varpool);
                     for i in st_val .. (en_val + 1) {
-                        update_var(var, Value::VNum(i), &cp_env, varpool);
+                        try!(update_var(var, Value::VNum(i), &cp_env, varpool));
                         let result = f_sub(body, &cp_env, varpool);
                         // TODO check if it is no result
                         if let Err(LoopBreak::LoopBreak) = result {
@@ -186,7 +194,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     let n = es.len();
                     let mut args = vec![Value::VNum(0); n];
                     if params.len() != n {
-                        panic!("wrong number of argument(s)");
+                        return Err(LoopBreak::Err("wrong number of argument(s)".to_string()));
                     }
                     for i in 0 .. n {
                         args[i] = try!(f_sub(&es[i], env, varpool));
@@ -203,11 +211,13 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     }
                     Ok(result)
                 },
-                None => panic!("FunApp"),
+                None => Err(LoopBreak::Err("FunApp".to_string())),
             }
         },
-        Expr::NewStruct(ref tyname, ref fields) => panic!("f_sub Expr::NewStruct"),
-        Expr::NewArray(ref tyname, ref e, ref cnt) => panic!("f_sub Expr::NewArray"),
+        Expr::NewStruct(ref tyname, ref fields) =>
+            Err(LoopBreak::Err("f_sub Expr::NewStruct".to_string())),
+        Expr::NewArray(ref tyname, ref e, ref cnt) =>
+            Err(LoopBreak::Err("f_sub Expr::NewArray".to_string())),
         Expr::Break => Err(LoopBreak::LoopBreak),
     }
 }
@@ -215,7 +225,8 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
 pub fn f(ast: &Expr) -> Value {
     match f_sub(ast, &(HashMap::new(), HashMap::new(), HashMap::new()), &mut Vec::new()) {
         Ok(result) => result,
-        Err(_) => panic!("f err"),
+        Err(LoopBreak::LoopBreak) => panic!("break outside loop was detected"),
+        Err(LoopBreak::Err(str)) => panic!("interpret::f: {}", str),
     }
 }
 
