@@ -24,7 +24,7 @@ The grammar of Tigress is similar to Tiger, but there are some modifications. Th
 | 2.5 Operators | ok |
 | 2.6 Assignment | ok |
 | 2.7 nil | ok |
-| 2.8 Flow control | `for` is supported |
+| 2.8 Flow control | `for` and `do` are supported |
 | 2.9 Let | not supported |
 | 3 Declarations| not supported |
 | 4 Standard Library | not supported |

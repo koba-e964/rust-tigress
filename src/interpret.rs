@@ -80,7 +80,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                         _ => panic!("arithmetic operation failed"),
                     }
                 },
-                Op::Eq | Op::Ne  => {
+                Op::Eq | Op::Ne => {
                     let (v1, v2) = (try!(f_sub(e1, env, varpool)),
                                     try!(f_sub(e2, env, varpool)));
                     let res = (op == Op::Ne) ^ (v1 == v2);
@@ -134,6 +134,9 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                         }
                         cp_env = define_var(name, val, &cp_env, varpool);
                     }
+                    Dec::Fun(ref name, ref args, ref opt_ty, ref body) => {
+                        panic!("function definition not implemented")
+                    }
                     _ => panic!("f_sub Expr::Let not supported")
                 }
             }
@@ -146,6 +149,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     for i in st_val .. (en_val + 1) {
                         update_var(var, Value::VNum(i), &cp_env, varpool);
                         let result = f_sub(body, &cp_env, varpool);
+                        // TODO check if it is no result
                         if let Err(LoopBreak::LoopBreak) = result {
                             break;
                         }
@@ -156,7 +160,19 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             panic!("f_sub Expr::For");
         },
         Expr::Do(ref cond, ref body) => {
-            panic!("f_sub Expr::Do");
+            loop {
+                if let Value::VNum(cval) = try!(f_sub(cond, env, varpool)) {
+                    if (cval == 0) {
+                        break;
+                    }
+                    let result = f_sub(body, env, varpool);
+                    // TODO check if it is no result
+                    if let Err(LoopBreak::LoopBreak) = result {
+                        break;
+                    }
+                }
+            }
+            return Ok(Value::VNil);
         },
         Expr::FunApp(ref f, ref es) => {
             // evaluate arguments from left to right
