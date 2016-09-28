@@ -63,5 +63,5 @@ fn main() {
     if args.flag_verbose {
         println!("{:?}", ast);
     }
-    println!("result = {:?}", interpret::f(&ast, args.flag_verbose));
+    println!("result = {}", interpret::f(&ast, args.flag_verbose));
 }

@@ -1,3 +1,5 @@
+use std::fmt;
+
 // Expr
 #[derive(PartialEq, Clone, Debug)]
 pub enum Expr {
@@ -52,6 +54,18 @@ pub enum Value {
     VStr(String),
     VNil,
     VNoResult, // indicates that an expression does't return a value
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Value::VNum(v) => write!(f, "{}", v),
+            &Value::VStr(ref v) => write!(f, "\"{}\"", v),
+            &Value::VNil => write!(f, "nil"),
+            &Value::VNoResult =>
+                write!(f, "***No Result--This should not be printed***"),
+        }
+    }
 }
 
 pub type TypeId = String;
