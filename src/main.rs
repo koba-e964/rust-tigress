@@ -60,14 +60,8 @@ fn main() {
             .unwrap_or_else(|e| panic!(e));
     }
     let ast = parse::parse(&s);
-    println!("{:?}", ast);
     if args.flag_verbose {
         println!("{:?}", ast);
-        /*
-        if args.flag_typing {
-            println!("typing: {:?}", typing::f(&fundecs, &ast));
-        }
-         */
     }
-    println!("result = {:?}", interpret::f(&ast));
+    println!("result = {:?}", interpret::f(&ast, args.flag_verbose));
 }

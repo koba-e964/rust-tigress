@@ -70,14 +70,17 @@ fn type_check(val: &Value, ty: &str) -> Result<(), LoopBreak> {
     }
 }
 
-fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBreak> {
+fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool, verbose: bool) -> Result<Value, LoopBreak> {
+    if verbose {
+        println!("env: {:?}, varpool: {:?}", env, varpool);
+    }
     match *ast {
         Expr::Num(i) => Ok(Value::VNum(i)),
         Expr::Str(ref str) => Ok(Value::VStr(str.clone())),
         Expr::LVal(LValue::Id(ref x)) => get_var(x, env, varpool),
         Expr::LVal(_) => panic!("f_sub Expr::LVal"),
         Expr::Neg(ref e) =>
-            match try!(f_sub(e, env, varpool)) {
+            match try!(f_sub(e, env, varpool, verbose)) {
                 Value::VNum(i) => Ok(Value::VNum(-i)),
                 _ => Err(LoopBreak::Err("Expr::Neg failed".to_string())),
             },
@@ -86,52 +89,53 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             match op {
                 Op::Add | Op::Sub | Op::Mul | Op::Div |
                 Op::Lt | Op::Gt | Op::Le | Op::Ge => {
-                    match (try!(f_sub(e1, env, varpool)),
-                           try!(f_sub(e2, env, varpool))) {
+                    match (try!(f_sub(e1, env, varpool, verbose)),
+                           try!(f_sub(e2, env, varpool, verbose))) {
                         (Value::VNum(i1), Value::VNum(i2)) =>
                             Ok(Value::VNum(arithmetic(op, i1, i2))),
                         _ => Err(LoopBreak::Err("arithmetic operation failed".to_string())),
                     }
                 },
                 Op::Eq | Op::Ne => {
-                    let (v1, v2) = (try!(f_sub(e1, env, varpool)),
-                                    try!(f_sub(e2, env, varpool)));
+                    let (v1, v2) = (try!(f_sub(e1, env, varpool, verbose)),
+                                    try!(f_sub(e2, env, varpool, verbose)));
                     let res = (op == Op::Ne) ^ (v1 == v2);
                     Ok(Value::VNum(if res { 1 } else { 0 }))
                 },
                 Op::Or => {
-                    let v1 = try!(f_sub(e1, env, varpool));
+                    let v1 = try!(f_sub(e1, env, varpool, verbose));
                     match v1 {
-                        Value::VNum(0) => f_sub(e2, env, varpool),
+                        Value::VNum(0) => f_sub(e2, env, varpool, verbose),
                         Value::VNum(_) => Ok(v1),
                         _ => Err(LoopBreak::Err("type error in Op::Or".to_string())),
                     }
                 },
                 Op::And => {
-                    let v1 = try!(f_sub(e1, env, varpool));
+                    let v1 = try!(f_sub(e1, env, varpool, verbose));
                     match v1 {
                         Value::VNum(0) => Ok(v1),
-                        Value::VNum(_) => f_sub(e2, env, varpool),
+                        Value::VNum(_) => f_sub(e2, env, varpool, verbose),
                         _ => Err(LoopBreak::Err("type error in Op::And".to_string())),
                     }
                 },
             },
         Expr::IfNode(ref cond, ref e_true, ref e_false) => 
-            match try!(f_sub(cond, env, varpool)) {
-                Value::VNum(0) => f_sub(e_false, env, varpool),
-                Value::VNum(_) => f_sub(e_true, env, varpool),
+            match try!(f_sub(cond, env, varpool, verbose)) {
+                Value::VNum(0) => f_sub(e_false, env, varpool, verbose),
+                Value::VNum(_) => f_sub(e_true, env, varpool, verbose),
                 _ => Err(LoopBreak::Err("Condition of if has to be an integer.".to_string())),
             },
         Expr::Nil => Ok(Value::VNil),
         Expr::LAsgn(LValue::Id(ref name), ref e) => {
-            try!(update_var(name, try!(f_sub(e, env, varpool)), env, varpool));
+            try!(update_var(name, try!(f_sub(e, env, varpool, verbose)),
+                            env, varpool));
             Ok(Value::VNil)
         },
         Expr::LAsgn(ref lval, ref e) => panic!("f_sub Expr::LAsgn"),
         Expr::Seq(ref es) => {
             let mut val = Value::VNil;
             for e in es {
-                val = try!(f_sub(e, env, varpool));
+                val = try!(f_sub(e, env, varpool, verbose));
             }
             Ok(val)
         },
@@ -140,7 +144,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
             for dec in decs {
                 match *dec {
                     Dec::Var(ref name, ref opt_ty, ref e) => {
-                        let val = try!(f_sub(e, env, varpool));
+                        let val = try!(f_sub(e, env, varpool, verbose));
                         // type-check
                         if let Some(ref ty) = *opt_ty {
                             try!(type_check(&val, ty));
@@ -153,15 +157,15 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                     _ => panic!("f_sub Expr::Let not supported")
                 }
             }
-            f_sub(e2, &cp_env, varpool)
+            f_sub(e2, &cp_env, varpool, verbose)
         },
         Expr::For(ref var, ref st, ref en, ref body) => {
-            if let Value::VNum(st_val) = try!(f_sub(st, env, varpool)) {
-                if let Value::VNum(en_val) = try!(f_sub(en, env, varpool)) {
+            if let Value::VNum(st_val) = try!(f_sub(st, env, varpool, verbose)) {
+                if let Value::VNum(en_val) = try!(f_sub(en, env, varpool, verbose)) {
                     let cp_env = define_var(var, Value::VNum(st_val), env, varpool);
                     for i in st_val .. (en_val + 1) {
                         try!(update_var(var, Value::VNum(i), &cp_env, varpool));
-                        let result = f_sub(body, &cp_env, varpool);
+                        let result = f_sub(body, &cp_env, varpool, verbose);
                         // TODO check if it is no result
                         if let Err(LoopBreak::LoopBreak) = result {
                             break;
@@ -174,11 +178,11 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
         },
         Expr::Do(ref cond, ref body) => {
             loop {
-                if let Value::VNum(cval) = try!(f_sub(cond, env, varpool)) {
+                if let Value::VNum(cval) = try!(f_sub(cond, env, varpool, verbose)) {
                     if cval == 0 {
                         break;
                     }
-                    let result = f_sub(body, env, varpool);
+                    let result = f_sub(body, env, varpool, verbose);
                     // TODO check if it is no result
                     if let Err(LoopBreak::LoopBreak) = result {
                         break;
@@ -197,7 +201,7 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                         return Err(LoopBreak::Err("wrong number of argument(s)".to_string()));
                     }
                     for i in 0 .. n {
-                        args[i] = try!(f_sub(&es[i], env, varpool));
+                        args[i] = try!(f_sub(&es[i], env, varpool, verbose));
                         try!(type_check(&args[i], &params[i].1));
                     }
                     let mut cp_env = env.clone();
@@ -205,13 +209,13 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
                         cp_env = define_var(&params[i].0, args[i].clone(), &cp_env, varpool);
                     }
                     // TODO env handling
-                    let result = try!(f_sub(&body, &cp_env, varpool));
+                    let result = try!(f_sub(&body, &cp_env, varpool, verbose));
                     if let Some(ref retty) = *opt_retty {
                         try!(type_check(&result, retty));
                     }
                     Ok(result)
                 },
-                None => Err(LoopBreak::Err("FunApp".to_string())),
+                None => Err(LoopBreak::Err("function not found in FunApp".to_string())),
             }
         },
         Expr::NewStruct(ref tyname, ref fields) =>
@@ -222,8 +226,8 @@ fn f_sub(ast: &Expr, env: &Env, varpool: &mut VarPool) -> Result<Value, LoopBrea
     }
 }
 
-pub fn f(ast: &Expr) -> Value {
-    match f_sub(ast, &(HashMap::new(), HashMap::new(), HashMap::new()), &mut Vec::new()) {
+pub fn f(ast: &Expr, verbose: bool) -> Value {
+    match f_sub(ast, &(HashMap::new(), HashMap::new(), HashMap::new()), &mut Vec::new(), verbose) {
         Ok(result) => result,
         Err(LoopBreak::LoopBreak) => panic!("break outside loop was detected"),
         Err(LoopBreak::Err(str)) => panic!("interpret::f: {}", str),
@@ -235,41 +239,33 @@ mod tests {
     use parse;
     use interpret;
     use ast::{Value};
+    fn check(expr: &str, val: Value) {
+        let ast = parse::parse(expr);
+        assert_eq!(interpret::f(&ast, false), val);
+    }
     #[test]
     fn letex_test() {
-        let ast1 = parse::parse("let var x := 4 in x + x end");
-        assert_eq!(interpret::f(&ast1), Value::VNum(8));
-        let ast1_typed = parse::parse("let var x: int := 4 in x + x end");
-        assert_eq!(interpret::f(&ast1_typed), Value::VNum(8));
-        let ast2 = parse::parse("let var x := 4 in let var x := 3 in x + x end end");
-        assert_eq!(interpret::f(&ast2), Value::VNum(6));
-        let ast3 = parse::parse("let var x := 4 in (let var x := 3 in x end) + x end");
-        assert_eq!(interpret::f(&ast3), Value::VNum(7));
+        check("let var x := 4 in x + x end", Value::VNum(8));
+        check("let var x: int := 4 in x + x end",  Value::VNum(8));
+        check("let var x := 4 in let var x := 3 in x + x end end",
+              Value::VNum(6));
+        check("let var x := 4 in (let var x := 3 in x end) + x end",
+              Value::VNum(7));
     }
     #[test]
     fn comp_test() {
-        let lt1 = parse::parse("2 < 5");
-        assert_eq!(interpret::f(&lt1), Value::VNum(1));
-        let lt2 = parse::parse("4 < 1");
-        assert_eq!(interpret::f(&lt2), Value::VNum(0));
-        let eq1 = parse::parse("2 = 2");
-        assert_eq!(interpret::f(&eq1), Value::VNum(1));
-        let eq2 = parse::parse("2 = 5");
-        assert_eq!(interpret::f(&eq2), Value::VNum(0));
-        let neq1 = parse::parse("2 <> 4");
-        assert_eq!(interpret::f(&neq1), Value::VNum(1));
-        let neq2 = parse::parse("2 <> 2");
-        assert_eq!(interpret::f(&neq2), Value::VNum(0));
+        check("2 < 5", Value::VNum(1));
+        check("4 < 1", Value::VNum(0));
+        check("2 = 2", Value::VNum(1));
+        check("2 = 5", Value::VNum(0));
+        check("2 <> 4", Value::VNum(1));
+        check("2 <> 2", Value::VNum(0));
     }
     #[test]
     fn logic_test() {
-        let and1 = parse::parse("2 & 3");
-        assert_eq!(interpret::f(&and1), Value::VNum(3));
-        let and2 = parse::parse("0 & 3");
-        assert_eq!(interpret::f(&and2), Value::VNum(0));
-        let or1 = parse::parse("2 | 152");
-        assert_eq!(interpret::f(&or1), Value::VNum(2));
-        let or2 = parse::parse("0 | 155");
-        assert_eq!(interpret::f(&or2), Value::VNum(155));
+        check("2 & 3", Value::VNum(3));
+        check("0 & 3", Value::VNum(0));
+        check("2 | 152", Value::VNum(2));
+        check("0 | 155", Value::VNum(155));
     }
 }
