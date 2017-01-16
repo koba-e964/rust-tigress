@@ -18,7 +18,7 @@ pub fn fold_op(first: Expr, ops: Vec<(Expr, Op)>) -> Expr {
     fold_to_ast((ops, first), |t, e1, e2| Expr::OpNode(t, Box::new(e1), Box::new(e2)))
 }
 
-peg! tigress_grammar(include_str!("grammar.rustpeg"));
+peg_file! tigress_grammar("grammar.rustpeg");
 
 
 pub fn parse(s: &str) -> Expr {

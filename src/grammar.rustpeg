@@ -12,8 +12,7 @@ use parse::*;
 %left "*" "/"
 %right UNARY_MINUS
 */
-#[pub]
-top_expr -> Expr
+pub top_expr -> Expr
      = space* e:expr space* { e }
 
 expr -> Expr
@@ -21,42 +20,43 @@ expr -> Expr
      / "while" space+ c:expr space+ "do" space+ e:expr { Expr::Do(Box::new(c), Box::new(e)) }
      / expr0
 
-expr0 -> Expr // if
+expr0 -> Expr /* if */
       = "if" space* c:expr space* "then" space* e1:expr1 !(space+ "else") { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(Expr::Nil)) }
       / expr1
-expr1 -> Expr // ifelse
+
+expr1 -> Expr /* ifelse */
       = "if" space* c:expr space* "then" space* e1:expr2 space* "else" space* e2:expr2 { Expr::IfNode(Box::new(c), Box::new(e1), Box::new(e2)) }
       / expr2
-expr2 -> Expr // :=
+expr2 -> Expr /* := */
       = l:lvalue space* ":=" space* e:expr3 { Expr::LAsgn(l, Box::new(e)) }
       / expr3
-expr3 -> Expr // "|"
+expr3 -> Expr /* "|" */
       = e:expr4 ls:(space* "|" space* e:expr4 { (e, Op::Or) })* { fold_op(e, ls) }
-expr4 -> Expr // "&"
+expr4 -> Expr /* "&" */
       = e:expr5 ls:(space* "&" space* e:expr5 { (e, Op::And) })* { fold_op(e, ls) }
-expr5 -> Expr // %nonassoc "=" "<>" "<" ">" "<=" ">="
+expr5 -> Expr /* %nonassoc "=" "<>" "<" ">" "<=" ">=" */
       = e1:expr6 space* op:op5 space* e2:expr6 { Expr::OpNode(op, Box::new(e1), Box::new(e2)) }
       / expr6
-op5 -> Op // %nonassoc "=" "<>" "<" ">" "<=" ">="
+op5 -> Op /* %nonassoc "=" "<>" "<" ">" "<=" ">=" */
     = "=" { Op::Eq }
     / "<>" { Op::Ne }
     / "<=" { Op::Le }
     / ">=" { Op::Ge }
     / "<" { Op::Lt }
     / ">" { Op::Gt }
-expr6 -> Expr // %left "+" "-"
+expr6 -> Expr /* %left "+" "-" */
       = e:expr7 ls:(space* o:op6 space* e:expr7 { (e, o) })* { fold_op(e, ls) }
       / expr7
-op6 -> Op // %left "+" "-"
+op6 -> Op /* %left "+" "-" */
       = "+" { Op::Add }
       / "-" { Op::Sub }
-expr7 -> Expr // %left "*" "/"
+expr7 -> Expr /* %left "*" "/" */
       = e:expr8 ls:(space* o:op7 space* e:expr8 { (e, o) })* { fold_op(e, ls) }
       / expr8
-op7 -> Op // %left "*" "/"
+op7 -> Op /* %left "*" "/" */
       = "*" { Op::Mul }
       / "/" { Op::Div }
-expr8 -> Expr // %right unary_minus
+expr8 -> Expr /* %right unary_minus */
       = "-" space* e:expr8 { Expr::Neg(Box::new(e)) }
       / primary
 primary -> Expr
@@ -85,7 +85,7 @@ field_list_opt -> Vec<Field>
      / { Vec::new() }
 
 lvalue -> LValue
-     = i:id ls:(space* lvalue_suffix)* { {
+     = i:id ls:(space* l:lvalue_suffix { l })* { {
      let mut acc = LValue::Id(i);
      for v in ls {
      	 acc = match v {
@@ -107,15 +107,15 @@ declaration -> Dec
      / "function" space+ fname:id space* "(" space* fields:type_fields_opt space* ")" space* retty:(":" space* t:id space* { t })? "=" space* e:expr { Dec::Fun(fname, fields, retty, e) }
 
 integer_constant -> Expr
-	= [0-9]+ { Expr::Num(match_str.parse().unwrap()) }
+	= mstr:$([0-9]+) { Expr::Num(mstr.parse().unwrap()) }
 string_constant -> Expr
         = "\"" s:str_internal "\"" { Expr::Str(s) }
 str_internal -> String
-        = [^\"]* { match_str.to_string() }
+        = mstr:$([^\"]*) { mstr.to_string() }
 space -> ()
         = " " / "\n" / "\r" / "\t" / "\x0c"
 id -> String
-        = !keyword [a-zA-Z] [a-zA-Z0-9_]* { match_str.to_string() }
+        = !keyword mstr:$([a-zA-Z] [a-zA-Z0-9_]*) { mstr.to_string() }
 keyword -> ()
 	= "let" / "nil" / "of" / "then" / "to" / "type" / "var" / "while"
 type -> Type

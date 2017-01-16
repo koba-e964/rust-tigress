@@ -8,7 +8,8 @@ default = ["docopt_macros"]
 no-docopt-macros = []
 
 [dependencies]
-peg = "0.3.13"
+peg = "0.5"
+peg-syntax-ext = "0.5"
 rustc-serialize = "0.3"
 docopt = ">=0.6.83"
 docopt_macros = { version = ">=0.6.86", optional = true }
