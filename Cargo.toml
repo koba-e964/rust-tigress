@@ -10,7 +10,7 @@ peg = "0.8"
 clap = "4"
 
 [[bin]]
-name = "calc-rust"
+name = "rust-tigress"
 path = "src/main.rs"
 test = false
 bench = false
