@@ -32,10 +32,18 @@ pub type FunDec = (String, Vec<(String, TypeId)>, Option<TypeId>, Expr);
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Op {
-    Add, Sub,
-    Mul, Div,
-    Eq, Ne, Lt, Gt, Le, Ge,
-    Or, And,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Or,
+    And,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -60,10 +68,9 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &Value::VNum(v) => write!(f, "{}", v),
-            &Value::VStr(ref v) => write!(f, "\"{}\"", v),
+            Value::VStr(ref v) => write!(f, "\"{}\"", v),
             &Value::VNil => write!(f, "nil"),
-            &Value::VNoResult =>
-                write!(f, "***No Result--This should not be printed***"),
+            &Value::VNoResult => write!(f, "***No Result--This should not be printed***"),
         }
     }
 }
